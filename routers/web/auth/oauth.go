@@ -1007,6 +1007,12 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 			log.Error("Error storing session: %v", err)
 		}
 
+		// set the cookie
+		days := 86400 * setting.LogInRememberDays
+		ctx.SetCookie(setting.CookieUserName, u.Name, days)
+		ctx.SetSuperSecureCookie(base.EncodeMD5(u.Rands+u.Passwd),
+			setting.CookieRememberName, u.Name, days)
+
 		// Clear whatever CSRF cookie has right now, force to generate a new one
 		middleware.DeleteCSRFCookie(ctx.Resp)
 
