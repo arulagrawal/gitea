@@ -12,6 +12,7 @@ import (
 	"code.gitea.io/gitea/models/db"
 	"code.gitea.io/gitea/models/organization"
 	"code.gitea.io/gitea/models/perm"
+	access_model "code.gitea.io/gitea/models/perm/access"
 	"code.gitea.io/gitea/models/unit"
 	user_model "code.gitea.io/gitea/models/user"
 	"code.gitea.io/gitea/modules/base"
@@ -238,7 +239,7 @@ func isOfficialReviewer(ctx context.Context, issue *Issue, reviewers ...*user_mo
 	if err != nil {
 		return false, err
 	}
-	if err = pr.loadProtectedBranch(ctx); err != nil {
+	if err = pr.LoadProtectedBranchCtx(ctx); err != nil {
 		return false, err
 	}
 	if pr.ProtectedBranch == nil {
@@ -265,7 +266,7 @@ func isOfficialReviewerTeam(ctx context.Context, issue *Issue, team *organizatio
 	if err != nil {
 		return false, err
 	}
-	if err = pr.loadProtectedBranch(ctx); err != nil {
+	if err = pr.LoadProtectedBranchCtx(ctx); err != nil {
 		return false, err
 	}
 	if pr.ProtectedBranch == nil {
@@ -891,7 +892,7 @@ func CanMarkConversation(issue *Issue, doer *user_model.User) (permResult bool, 
 			return false, err
 		}
 
-		p, err := GetUserRepoPermission(issue.Repo, doer)
+		p, err := access_model.GetUserRepoPermission(db.DefaultContext, issue.Repo, doer)
 		if err != nil {
 			return false, err
 		}

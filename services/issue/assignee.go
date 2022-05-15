@@ -5,10 +5,13 @@
 package issue
 
 import (
+	"context"
+
 	"code.gitea.io/gitea/models"
 	"code.gitea.io/gitea/models/db"
 	"code.gitea.io/gitea/models/organization"
 	"code.gitea.io/gitea/models/perm"
+	access_model "code.gitea.io/gitea/models/perm/access"
 	"code.gitea.io/gitea/models/unit"
 	user_model "code.gitea.io/gitea/models/user"
 	"code.gitea.io/gitea/modules/log"
@@ -78,7 +81,7 @@ func ReviewRequest(issue *models.Issue, doer, reviewer *user_model.User, isAdd b
 }
 
 // IsValidReviewRequest Check permission for ReviewRequest
-func IsValidReviewRequest(reviewer, doer *user_model.User, isAdd bool, issue *models.Issue, permDoer *models.Permission) error {
+func IsValidReviewRequest(ctx context.Context, reviewer, doer *user_model.User, isAdd bool, issue *models.Issue, permDoer *access_model.Permission) error {
 	if reviewer.IsOrganization() {
 		return models.ErrNotValidReviewRequest{
 			Reason: "Organization can't be added as reviewer",
@@ -94,14 +97,14 @@ func IsValidReviewRequest(reviewer, doer *user_model.User, isAdd bool, issue *mo
 		}
 	}
 
-	permReviewer, err := models.GetUserRepoPermission(issue.Repo, reviewer)
+	permReviewer, err := access_model.GetUserRepoPermission(ctx, issue.Repo, reviewer)
 	if err != nil {
 		return err
 	}
 
 	if permDoer == nil {
-		permDoer = new(models.Permission)
-		*permDoer, err = models.GetUserRepoPermission(issue.Repo, doer)
+		permDoer = new(access_model.Permission)
+		*permDoer, err = access_model.GetUserRepoPermission(ctx, issue.Repo, doer)
 		if err != nil {
 			return err
 		}
@@ -168,7 +171,7 @@ func IsValidReviewRequest(reviewer, doer *user_model.User, isAdd bool, issue *mo
 }
 
 // IsValidTeamReviewRequest Check permission for ReviewRequest Team
-func IsValidTeamReviewRequest(reviewer *organization.Team, doer *user_model.User, isAdd bool, issue *models.Issue) error {
+func IsValidTeamReviewRequest(ctx context.Context, reviewer *organization.Team, doer *user_model.User, isAdd bool, issue *models.Issue) error {
 	if doer.IsOrganization() {
 		return models.ErrNotValidReviewRequest{
 			Reason: "Organization can't be doer to add reviewer",
@@ -177,7 +180,7 @@ func IsValidTeamReviewRequest(reviewer *organization.Team, doer *user_model.User
 		}
 	}
 
-	permission, err := models.GetUserRepoPermission(issue.Repo, doer)
+	permission, err := access_model.GetUserRepoPermission(ctx, issue.Repo, doer)
 	if err != nil {
 		log.Error("Unable to GetUserRepoPermission for %-v in %-v#%d", doer, issue.Repo, issue.Index)
 		return err
@@ -185,7 +188,7 @@ func IsValidTeamReviewRequest(reviewer *organization.Team, doer *user_model.User
 
 	if isAdd {
 		if issue.Repo.IsPrivate {
-			hasTeam := organization.HasTeamRepo(db.DefaultContext, reviewer.OrgID, reviewer.ID, issue.RepoID)
+			hasTeam := organization.HasTeamRepo(ctx, reviewer.OrgID, reviewer.ID, issue.RepoID)
 
 			if !hasTeam {
 				return models.ErrNotValidReviewRequest{

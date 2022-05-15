@@ -11,6 +11,7 @@ import (
 
 	"code.gitea.io/gitea/models"
 	"code.gitea.io/gitea/models/organization"
+	access_model "code.gitea.io/gitea/models/perm/access"
 	user_model "code.gitea.io/gitea/models/user"
 	"code.gitea.io/gitea/modules/context"
 	"code.gitea.io/gitea/modules/convert"
@@ -664,7 +665,7 @@ func apiReviewRequest(ctx *context.APIContext, opts api.PullReviewRequestOptions
 
 	reviewers := make([]*user_model.User, 0, len(opts.Reviewers))
 
-	permDoer, err := models.GetUserRepoPermission(pr.Issue.Repo, ctx.Doer)
+	permDoer, err := access_model.GetUserRepoPermission(ctx, pr.Issue.Repo, ctx.Doer)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermission", err)
 		return
@@ -687,7 +688,7 @@ func apiReviewRequest(ctx *context.APIContext, opts api.PullReviewRequestOptions
 			return
 		}
 
-		err = issue_service.IsValidReviewRequest(reviewer, ctx.Doer, isAdd, pr.Issue, &permDoer)
+		err = issue_service.IsValidReviewRequest(ctx, reviewer, ctx.Doer, isAdd, pr.Issue, &permDoer)
 		if err != nil {
 			if models.IsErrNotValidReviewRequest(err) {
 				ctx.Error(http.StatusUnprocessableEntity, "NotValidReviewRequest", err)
@@ -736,7 +737,7 @@ func apiReviewRequest(ctx *context.APIContext, opts api.PullReviewRequestOptions
 				return
 			}
 
-			err = issue_service.IsValidTeamReviewRequest(teamReviewer, ctx.Doer, isAdd, pr.Issue)
+			err = issue_service.IsValidTeamReviewRequest(ctx, teamReviewer, ctx.Doer, isAdd, pr.Issue)
 			if err != nil {
 				if models.IsErrNotValidReviewRequest(err) {
 					ctx.Error(http.StatusUnprocessableEntity, "NotValidReviewRequest", err)

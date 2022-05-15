@@ -594,6 +594,12 @@ func AddOrgUser(orgID, uid int64) error {
 	}
 	defer committer.Close()
 
+	// check in transaction
+	isAlreadyMember, err = IsOrganizationMember(ctx, orgID, uid)
+	if err != nil || isAlreadyMember {
+		return err
+	}
+
 	ou := &OrgUser{
 		UID:      uid,
 		OrgID:    orgID,
@@ -683,7 +689,7 @@ func (org *Organization) getUserTeamIDs(ctx context.Context, userID int64) ([]in
 
 // TeamsWithAccessToRepo returns all teams that have given access level to the repository.
 func (org *Organization) TeamsWithAccessToRepo(repoID int64, mode perm.AccessMode) ([]*Team, error) {
-	return GetTeamsWithAccessToRepo(org.ID, repoID, mode)
+	return GetTeamsWithAccessToRepo(db.DefaultContext, org.ID, repoID, mode)
 }
 
 // GetUserTeamIDs returns of all team IDs of the organization that user is member of.
